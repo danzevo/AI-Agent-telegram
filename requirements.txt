@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+httpx
+sqlmodel
+chromadb
+pydantic-settings
+python-dotenv
+pymupdf
