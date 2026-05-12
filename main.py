@@ -27,18 +27,28 @@ async def handle_user_message(chat_id: int, text:str):
         )
         await telegram_service.send_message(chat_id, welcome_msg)
         return
-        
-    await telegram_service.send_chat_action(chat_id, action="typing")
+
+    # Start the recurring typing indicator task
+    stop_typing = asyncio.Event()
+    typing_task = asyncio.create_task(keep_typing(chat_id, stop_typing))
+
+    try:
+        # Get response from the AI Agent (which might take a while if it searches the web)
+    # await telegram_service.send_chat_action(chat_id, action="typing")
     
-    response = await agent_service.handle_message(chat_id, text)
+        response = await agent_service.handle_message(chat_id, text)
 
-    if response.startswith("__SEND_FILE__:"):
-        file_path = response.replace("__SEND_FILE__:", "")
-        await telegram_service.send_chat_action(chat_id, action="upload_document")
-        await telegram_service.send_document(chat_id, file_path)
-    else:
-        await telegram_service.send_message(chat_id, response)
-
+        if response.startswith("__SEND_FILE__:"):
+            file_path = response.replace("__SEND_FILE__:", "")
+            await telegram_service.send_chat_action(chat_id, action="upload_document")
+            await telegram_service.send_document(chat_id, file_path)
+        else:
+            await telegram_service.send_message(chat_id, response)
+    finally:
+        # Ensure typing indicator is stopped and task is cleaned up
+        stop_typing.set()
+        await typing_task
+        
 async def handle_document_upload(chat_id: int, document: dict):
     """Handle when user sends a file (PDF) to the bot."""
     file_name = document.get("file_name", "unknown")
@@ -67,6 +77,19 @@ async def handle_document_upload(chat_id: int, document: dict):
     except Exception as e:
         print(f"Error processing document: {e}")
         await telegram_service.send_message(chat_id, f"❌ Error processing file: {e}")
+
+async def keep_typing(chat_id: int, stop_event: asyncio.Event):
+    """Refreshes the 'typing...' status every 4.5 seconds until stopped."""
+    while not stop_event.is_set():
+        await telegram_service.send_chat_action(chat_id, action="typing")
+        try:
+            # Wait for the stop event OR timeout after 4.5 seconds
+            await asyncio.wait_for(stop_event.wait(), timeout=4.5)
+        except asyncio.TimeoutError:
+            continue # Timeout reached, repeat the loop to send typing again
+        except Exception as e:
+            print(f"Typing indicator error: {e}")
+            break
 
 @app.on_event("startup")
 async def startup_event():
