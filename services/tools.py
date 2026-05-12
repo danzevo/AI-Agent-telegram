@@ -1,6 +1,7 @@
 from repositories.sql_repo import SQLRepository
 from repositories.vector_repo import VectorRepository
 from services.llm import LLMService
+from duckduckgo_search import DDGS
 
 sql_repo = SQLRepository()
 vector_repo = VectorRepository()
@@ -46,10 +47,46 @@ async def send_document(file_name: str, chat_id: int) -> str:
 
     return f"__SEND_FILE__:{doc.local_path}"
 
+async def web_search(query: str, chat_id: int = None) -> str:
+    """Search the live internet for current information."""
+    try:
+        results = []
+        with DDGS() as ddgs:
+            # 1. Try Text Results
+            try:
+                for r in ddgs.text(query, max_results=3):
+                    results.append(f"Title: {r.get('title')}\nSnippet: {r.get('body')}\nLink: {r.get('href')}\n")
+            except Exception as e:
+                if "Ratelimit" in str(e):
+                    results.append(f"[Error] Search engine rate limit hit for text search.")
+                else:
+                    results.append(f"[Error] Text search failed: {e}")
+            
+            # 2. Try News Results (crucial for sports, current events)
+            try:
+                for r in ddgs.news(query, max_results=3):
+                    results.append(f"[NEWS] Title: {r.get('title')}\nSnippet: {r.get('body')}\nDate: {r.get('date')}\n")
+            except Exception as e:
+                if "Ratelimit" in str(e):
+                    results.append(f"[Error] Search engine rate limit hit for news search.")
+                else:
+                    pass # Ignore other news errors if text worked
+
+            if not results or all("[Error]" in r for r in results):
+                return (
+                    f"No results found on the web for query: '{query}'.\n"
+                    "TIP: Try a broader query (e.g., remove specific dates or add 'score' or 'result')."
+                )
+
+            return "Web Search Results:\n" + "\n".join(results)
+    except Exception as e:
+        return f"Error connecting to search service: {e}"
+    
 # A registry mapping tool names to functions
 AVAILABLE_TOOLS = {
     "save_fact": save_fact,
     "search_documents": search_documents,
     "list_documents": list_documents,
     "send_document": send_document,
+    "web_search": web_search
 }

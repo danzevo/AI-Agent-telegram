@@ -21,6 +21,7 @@ async def handle_user_message(chat_id: int, text:str):
             "🧠 **Remember details**: I can learn and store facts about you.\n"
             "📄 **Manage PDFs**: You can upload PDF documents for me to read.\n"
             "🔎 **Search & Retrieve**: You can ask me questions about your documents, or ask me to send them back to you.\n"
+            "🌐 **Web Search**: You can ask me about current events, news, or weather, and I will search the live internet!\n"
             "💬 **Chat**: Or we can just chat normally!\n\n"
             "How can I help you today?"
         )

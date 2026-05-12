@@ -5,6 +5,8 @@ A privacy-focused, autonomous Telegram AI Agent built with FastAPI and a local L
 ## Features
 * **Conversational AI**: Powered by LLaMA 3 8B Instruct.
 * **Persistent Memory**: Learns and remembers user facts using SQLite & SQLModel.
+* **Live Web Research**: Uses DuckDuckGo to research current events, news, and weather in real-time.
+* **Chat History Persistence**: Conversation history is stored in SQLite, allowing the bot to remember context across restarts.
 * **Document Management**: Users can upload PDFs directly via Telegram.
 * **Semantic Search (RAG)**: Extracts, chunks, and embeds PDFs into ChromaDB for context-aware Q&A.
 * **File Retrieval**: Can list and send previously uploaded documents back to the user.
@@ -28,6 +30,7 @@ A privacy-focused, autonomous Telegram AI Agent built with FastAPI and a local L
    python -m venv venv
    venv\Scripts\activate
    pip install -r requirements.txt
+   pip install duckduckgo-search
    ```
 
 3. **Environment Variables**

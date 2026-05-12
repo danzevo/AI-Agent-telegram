@@ -1,6 +1,6 @@
 from sqlmodel import Session, select
 from database.db import engine
-from database.models import UserFact, UserDocument
+from database.models import UserFact, UserDocument, ChatMessage
 
 class SQLRepository:
     def save_fact(self, chat_id: int, fact: str):
@@ -37,4 +37,18 @@ class SQLRepository:
             )
 
             return session.exec(statement).first()
+    
+    def save_message(self, chat_id: int, role: str, content: str):
+        with Session(engine) as session:
+            message = ChatMessage(chat_id=chat_id, role=role, content=content)
+            session.add(message)
+            session.commit()
+    
+    def get_chat_history(self, chat_id: int, limit: int = 10):
+        with Session(engine) as session:
+            statement = select(ChatMessage).where(ChatMessage.chat_id == chat_id).order_by(ChatMessage.timestamp.desc()).limit(limit)
+            results = session.exec(statement).all()
+            # We reverse them so they are in chronological order for the AI
+            return [{"role": r.role, "content": r.content} for r in reversed(results)]
+
 
