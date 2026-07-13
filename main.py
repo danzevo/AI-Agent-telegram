@@ -1,18 +1,21 @@
 import os
 import httpx
-# --- 🚨 SLEDGEHAMMER SSL BYPASS 🚨 ---
-os.environ["HF_HUB_DISABLE_SSL_VERIFICATION"] = "1"
-os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "0"
-os.environ["HF_HUB_DISABLE_XET"] = "1"
+from config import settings
 
-# Monkey-patch httpx to forcefully disable SSL verification globally
-_original_client_init = httpx.Client.__init__
-def _patched_client_init(self, *args, **kwargs):
-    kwargs["verify"] = False
-    _original_client_init(self, *args, **kwargs)
+if not settings.ssl_verify:
+    # --- 🚨 SLEDGEHAMMER SSL BYPASS 🚨 ---
+    os.environ["HF_HUB_DISABLE_SSL_VERIFICATION"] = "1"
+    os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "0"
+    os.environ["HF_HUB_DISABLE_XET"] = "1"
 
-httpx.Client.__init__ = _patched_client_init
-# -------------------------------------
+    # Monkey-patch httpx to forcefully disable SSL verification globally
+    _original_client_init = httpx.Client.__init__
+    def _patched_client_init(self, *args, **kwargs):
+        kwargs["verify"] = False
+        _original_client_init(self, *args, **kwargs)
+
+    httpx.Client.__init__ = _patched_client_init
+    # -------------------------------------
 
 from fastapi import FastAPI, Request
 from config import settings
