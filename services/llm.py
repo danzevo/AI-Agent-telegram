@@ -4,7 +4,7 @@ from config import settings
 class LLMService:
     def __init__(self):
         self.base_url = settings.lm_studio_url
-        self.client = httpx.AsyncClient(timeout=60.0)
+        self.client = httpx.AsyncClient(timeout=300.0)
 
     async def get_embedding(self, text: str) -> list[float]:
         response = await self.client.post(f"{self.base_url}/embeddings",
@@ -18,7 +18,7 @@ class LLMService:
 
     async def chat_completion(self, messages: list[dict]) -> dict:
         payload = {
-            "model": "llama-3-8b-instruct",
+            "model": settings.llm_model,
             "messages": messages,
             "temperature": 0.3
         }

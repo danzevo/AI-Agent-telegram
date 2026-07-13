@@ -1,7 +1,7 @@
 from repositories.sql_repo import SQLRepository
 from repositories.vector_repo import VectorRepository
 from services.llm import LLMService
-from duckduckgo_search import DDGS
+from ddgs import DDGS
 
 sql_repo = SQLRepository()
 vector_repo = VectorRepository()
@@ -11,14 +11,22 @@ async def save_fact(chat_id: int, fact: str) -> str:
     return f"Successfully saved fact: {fact}"
 
 async def search_documents(query: str, chat_id: int = None) -> str:
+    if not chat_id:
+        return "Error: chat_id is missing."
+
     llm = LLMService()
     query_emb = await llm.get_embedding(query)
-    results = vector_repo.search(query_emb)
+    results = vector_repo.search(query_emb, chat_id=chat_id)
 
     if not results:
         return "No relevant document found."
 
-    return "Found information:\n" + "\n".join(results)
+    # Format the results including the page numbers
+    formatted_results = []
+    for r in results:
+        formatted_results.append(f"[Page {r['page']}]: {r['text']}")
+
+    return "Found information:\n" + "\n---\n".join(formatted_results)
 
 async def list_documents(chat_id: int) -> str:
     docs = sql_repo.get_documents(chat_id)

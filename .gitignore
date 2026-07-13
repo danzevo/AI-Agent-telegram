@@ -38,3 +38,5 @@ uploads/
 .vscode/
 .idea/
 *.swp
+
+whisper-model/

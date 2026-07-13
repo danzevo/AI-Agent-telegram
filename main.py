@@ -1,3 +1,19 @@
+import os
+import httpx
+# --- 🚨 SLEDGEHAMMER SSL BYPASS 🚨 ---
+os.environ["HF_HUB_DISABLE_SSL_VERIFICATION"] = "1"
+os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "0"
+os.environ["HF_HUB_DISABLE_XET"] = "1"
+
+# Monkey-patch httpx to forcefully disable SSL verification globally
+_original_client_init = httpx.Client.__init__
+def _patched_client_init(self, *args, **kwargs):
+    kwargs["verify"] = False
+    _original_client_init(self, *args, **kwargs)
+
+httpx.Client.__init__ = _patched_client_init
+# -------------------------------------
+
 from fastapi import FastAPI, Request
 from config import settings
 import asyncio
@@ -5,10 +21,13 @@ from services.telegram import TelegramService
 from services.agent import AgentService
 from database.db import create_db_and_tables
 from utils.document import process_pdf
+import base64
+from faster_whisper import WhisperModel
 
 app = FastAPI(title="Telegram AI Agent")
 telegram_service = TelegramService()
 agent_service = AgentService()
+whisper_model = WhisperModel("base", device="cpu", compute_type="int8", download_root="./whisper-model")
 
 async def handle_user_message(chat_id: int, text:str):
     # Optional: Send "Thinking..." indicator
@@ -66,7 +85,7 @@ async def handle_document_upload(chat_id: int, document: dict):
         # Step 2: Download file locally
         local_path = await telegram_service.download_file(file_path, file_name)
         # Step 3: Extract text, chunk, embed, store in ChromaDB
-        await process_pdf(local_path, doc_id=f"{chat_id}_{file_name}")
+        await process_pdf(local_path, doc_id=f"{chat_id}_{file_name}", chat_id=chat_id)
 
         from repositories.sql_repo import SQLRepository
         sql_repo = SQLRepository()
@@ -77,6 +96,42 @@ async def handle_document_upload(chat_id: int, document: dict):
     except Exception as e:
         print(f"Error processing document: {e}")
         await telegram_service.send_message(chat_id, f"❌ Error processing file: {e}")
+
+async def handle_photo_upload(chat_id: int, photos: list, caption: str):
+    await telegram_service.send_message(chat_id, "🖼️ Analyzing image...")
+    # Telegram sends multiple sizes. Grab the last one (highest resolution)
+    file_id = photos[-1]["file_id"]
+    try:
+        file_path = await telegram_service.get_file_path(file_id)
+        local_path = await telegram_service.download_file(file_path, "temp_image.jpg")
+
+        # Encode image to Base64
+        with open(local_path, "rb") as image_file:
+            image_base64 = base64.b64encode(image_file.read()).decode('utf-8')
+
+        # Send to Qwen2.5-VL via AgentService
+        response = await agent_service.handle_message(chat_id, caption, image_base64=image_base64)
+        await telegram_service.send_message(chat_id, response)
+    except Exception as e:
+        await telegram_service.send_message(chat_id, f"❌ Error processing image: {e}")
+
+async def handle_voice_upload(chat_id: int, voice: dict):
+    await telegram_service.send_message(chat_id, "🎤 Listening...")
+    file_id = voice["file_id"]
+    try:
+        file_path = await telegram_service.get_file_path(file_id)
+        local_path = await telegram_service.download_file(file_path, "temp_voice.ogg")
+
+        # Transcribe audio to text locally
+        segments, _ = whisper_model.transcribe(local_path, beam_size=5)
+        text = "".join([segment.text for segment in segments]).strip()
+
+        # Send transcribed text to Qwen2.5-VL
+        response = await agent_service.handle_message(chat_id, text)
+        await telegram_service.send_message(chat_id, response)
+    except Exception as e:
+        await telegram_service.send_message(chat_id, f"❌ Error processing voice: {e}")
+
 
 async def keep_typing(chat_id: int, stop_event: asyncio.Event):
     """Refreshes the 'typing...' status every 4.5 seconds until stopped."""
@@ -101,7 +156,7 @@ async def startup_event():
     elif settings.bot_mode == "polling":
         await telegram_service.delete_webhook()
 
-        asyncio.create_task(telegram_service.start_polling(handle_user_message, handle_document_upload))
+        asyncio.create_task(telegram_service.start_polling(handle_user_message, handle_document_upload, handle_photo_upload, handle_voice_upload))
         print("Started polling...")
 
 @app.post("/webhook")

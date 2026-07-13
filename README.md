@@ -1,9 +1,11 @@
-# Personal Knowledge Assistant (Telegram AI Agent)
+# Multimodal Knowledge Assistant (Telegram AI Agent)
 
-A privacy-focused, autonomous Telegram AI Agent built with FastAPI and a local LLaMA 3 8B model via LM Studio. This agent features both relational memory for user facts and semantic memory for PDF document retrieval, orchestrated using a custom ReAct tool-calling loop.
+A privacy-focused, autonomous Telegram AI Agent built with FastAPI and a local Vision-Language Model (Qwen2.5-VL / Llama 3.2 Vision) via LM Studio. This agent features relational memory for user facts, semantic memory for PDF document retrieval (RAG), multimodal image analysis, and is orchestrated using a custom ReAct tool-calling loop.
 
 ## Features
-* **Conversational AI**: Powered by LLaMA 3 8B Instruct.
+* **Conversational AI**: Powered by advanced LLMs (Qwen2.5 / Llama 3).
+* **Multimodal Image Analysis**: Can process, "see", and describe images sent directly in Telegram chat using Vision-Language Models (VLMs).
+* **Autonomous Tool Calling**: Built-in ReAct loop allows the agent to autonomously decide when to use tools (search web, search PDF, save facts) without relying on heavy frameworks.
 * **Persistent Memory**: Learns and remembers user facts using SQLite & SQLModel.
 * **Live Web Research**: Uses DuckDuckGo to research current events, news, and weather in real-time.
 * **Chat History Persistence**: Conversation history is stored in SQLite, allowing the bot to remember context across restarts.
@@ -14,8 +16,8 @@ A privacy-focused, autonomous Telegram AI Agent built with FastAPI and a local L
 
 ## Architecture
 * **Framework**: FastAPI (Async)
-* **Database**: SQLite (SQLModel) & ChromaDB
-* **LLM**: LM Studio (LLaMA 3 8B + nomic-embed-text-v1.5)
+* **Database**: SQLite (SQLModel) & ChromaDB (Vector DB for RAG)
+* **LLM**: LM Studio (Qwen2.5-VL/Llama Vision + nomic-embed-text-v1.5)
 * **Pattern**: Controller -> Service -> Repository
 
 ## Setup
@@ -38,6 +40,7 @@ A privacy-focused, autonomous Telegram AI Agent built with FastAPI and a local L
    ```env
    TELEGRAM_BOT_TOKEN="your_token_here"
    LM_STUDIO_URL="http://localhost:1234/v1"
+   LLM_MODEL="qwen2.5-vl-7b-instruct"
    BOT_MODE="polling"
    WEBHOOK_URL="https://your-ngrok-url.app/webhook"
    SSL_VERIFY=False

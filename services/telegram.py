@@ -40,7 +40,7 @@ class TelegramService:
 
         return local_path
 
-    async def start_polling(self, message_handler, document_handler):
+    async def start_polling(self, message_handler, document_handler, photo_handler, voice_handler):
         offset = 0
         while True:
             try:
@@ -57,6 +57,10 @@ class TelegramService:
                         if "document" in message:
                             # User sent a file
                             await document_handler(chat_id, message["document"])
+                        elif "photo" in message:
+                            await photo_handler(chat_id, message["photo"], message.get("caption",""))
+                        elif "voice" in message:
+                            await voice_handler(chat_id, message["voice"])
                         elif "text" in message:
                             # User sent text
                             await message_handler(chat_id, message["text"])

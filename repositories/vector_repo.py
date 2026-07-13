@@ -9,14 +9,22 @@ class VectorRepository:
             metadatas=[metadata]
         )
 
-    def search(self, query_embedding: list[float], n_results: int = 3) -> list[str]:
+    def search(self, query_embedding: list[float], chat_id: int, n_results: int = 3) -> list[dict]:
         results = collection.query(
             query_embeddings=[query_embedding],
+            where={"chat_id": chat_id},
             n_results=n_results
         )
 
-        # return the list of matching chunks
+        output = []
         if results["documents"] and len(results["documents"]) > 0:
-            return results["documents"][0]
+            documents = results["documents"][0]
+            metadatas = results["metadatas"][0] if results["metadatas"] else []
 
-        return []
+            for doc, meta in zip(documents, metadatas):
+                output.append({
+                    "text": doc,
+                    "page": meta.get("page", "unknown")
+                })
+
+        return output

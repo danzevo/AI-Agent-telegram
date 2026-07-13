@@ -6,5 +6,5 @@ chromadb
 pydantic-settings
 python-dotenv
 pymupdf
-duckduckgo_search
 ddgs
+faster-whisper
