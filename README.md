@@ -4,6 +4,7 @@ A privacy-focused, autonomous Telegram AI Agent built with FastAPI and a local V
 
 ## Features
 * **Conversational AI**: Powered by advanced LLMs (Qwen2.5 / Llama 3).
+* **Voice-in, Voice-out (TTS/STT)**: Send a voice note, and the bot uses OpenAI Whisper to transcribe it, processes the text, and replies with a neural-generated Voice Note using `edge-tts`.
 * **Multimodal Image Analysis**: Can process, "see", and describe images sent directly in Telegram chat using Vision-Language Models (VLMs).
 * **Autonomous Tool Calling**: Built-in ReAct loop allows the agent to autonomously decide when to use tools (search web, search PDF, save facts) without relying on heavy frameworks.
 * **Persistent Memory**: Learns and remembers user facts using SQLite & SQLModel.

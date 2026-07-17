@@ -26,6 +26,7 @@ from database.db import create_db_and_tables
 from utils.document import process_pdf
 import base64
 from faster_whisper import WhisperModel
+import edge_tts
 
 app = FastAPI(title="Telegram AI Agent")
 telegram_service = TelegramService()
@@ -129,9 +130,23 @@ async def handle_voice_upload(chat_id: int, voice: dict):
         segments, _ = whisper_model.transcribe(local_path, beam_size=5)
         text = "".join([segment.text for segment in segments]).strip()
 
-        # Send transcribed text to Qwen2.5-VL
+        # 2. Send transcribed text to the LLM (Qwen/Llama)
         response = await agent_service.handle_message(chat_id, text)
-        await telegram_service.send_message(chat_id, response)
+
+        # 3. Show "recording voice..." indicator in Telegram
+        await telegram_service.send_chat_action(chat_id, action="record_voice")
+
+        # 4. Generate Audio using edge-tts (Default Female Voice: en-US-AriaNeural)
+        output_audio_path = f"./uploads/reply_{chat_id}.mp3"
+        communicate = edge_tts.Communicate(response, "en-US-AriaNeural")
+        await communicate.save(output_audio_path)
+
+        # 5. Send the audio back to the user
+        await telegram_service.send_voice(chat_id, output_audio_path)
+
+        # 6. Clean up the audio file so we don't waste disk space
+        if os.path.exists(output_audio_path):
+            os.remove(output_audio_path)
     except Exception as e:
         await telegram_service.send_message(chat_id, f"❌ Error processing voice: {e}")
 

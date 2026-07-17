@@ -82,3 +82,13 @@ class TelegramService:
         """Show a 'typing...' or 'upload_document...' indicator in Telegram."""
         await self.client.post(f"{self.base_url}/sendChatAction",
                             json={"chat_id": chat_id, "action": action})
+
+    async def send_voice(self, chat_id: int, file_path: str):
+        """Send a Voice Note (.mp3/.ogg) back to the user."""
+        with open(file_path, "rb") as f:
+            files = {"voice": f}
+            await self.client.post(
+                f"{self.base_url}/sendVoice",
+                data={"chat_id": chat_id},
+                files=files
+            )
